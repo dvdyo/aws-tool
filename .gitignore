@@ -1,0 +1,5 @@
+*devenv*
+.direnv
+__pycache__
+.pre-commit-config.yaml
+*pem
