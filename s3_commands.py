@@ -83,11 +83,10 @@ def make_public(
     s3_key: str = typer.Argument(..., help="Object key to make public"),
 ):
     """Make a single object publicly readable."""
-    print(f"Making s3://{bucket_name}/{s3_key} public...")
 
     client = get_client("s3")
-    # TODO: client.put_object_acl(Bucket=bucket_name, Key=s3_key, ACL="public-read")
 
+    client.put_object_acl(Bucket=bucket_name, Key=s3_key, ACL="public-read")
 
 #---- 1.b.vi ----
 @app.command("delete")
@@ -99,8 +98,17 @@ def delete_objects(
     print(f"Deleting s3://{bucket_name}/{prefix}...")
 
     client = get_client("s3")
-    # TODO: list + client.delete_objects(...)
+    response = client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+    objects = response.get("Contents", [])
 
+    if not objects:
+        typer.echo("No objects found.")
+        return
+
+    client.delete_objects(
+        Bucket=bucket_name,
+        Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
+    )
 
 #---- 1.b.vii ----
 @app.command("delete-bucket")
