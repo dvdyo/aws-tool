@@ -37,9 +37,9 @@ def upload_file(
     client.upload_file(Filename=file_path, Bucket=bucket_name, Key=s3_key)
 
 #---- 1.b.iii ----
-@app.command("upload-folder")
+@app.command("upload-dir")
 def upload_folder(
-    folder_path: str = typer.Argument(..., help="Local folder to upload"),
+    folder_path: str = typer.Argument(..., help="Local directory to upload"),
     bucket_name: str = typer.Argument(..., help="Target bucket name"),
     prefix: str = typer.Option("", "--prefix", "-p", help="S3 key prefix (virtual folder)"),
 ):
@@ -61,8 +61,15 @@ def list_objects(
     print(f"Listing s3://{bucket_name}/{prefix}  (versions={show_versions})")
 
     client = get_client("s3")
-    # TODO: client.list_objects_v2() or client.list_object_versions()
-
+    
+    if show_versions:
+        response = client.list_object_versions(Bucket=bucket_name, Prefix=prefix)
+        for obj in response.get("Versions", []):
+            typer.echo(f"{obj['Key']}  {obj['Size']} bytes  {obj['StorageClass']}  version={obj['VersionId']}")
+    else:
+        response = client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
+        for obj in response.get("Contents", []):
+            typer.echo(f"{obj['Key']}  {obj['Size']} bytes  {obj['StorageClass']}")
 
 #---- 1.b.v ----
 @app.command("make-public")
