@@ -44,11 +44,16 @@ def upload_folder(
     prefix: str = typer.Option("", "--prefix", "-p", help="S3 key prefix (virtual folder)"),
 ):
     """Recursively upload a local folder to an S3 bucket."""
-    print(f"Uploading folder {folder_path}/ -> s3://{bucket_name}/{prefix}")
 
     client = get_client("s3")
-    # TODO: os.walk() + client.upload_file() for each file
-
+    
+    for root, dirs, files in os.walk(folder_path):
+        for file in files:
+            local_path = os.path.join(root, file)
+            relative_path = os.path.relpath(local_path, folder_path)
+            s3_key = os.path.join(prefix, relative_path) if prefix else relative_path
+        
+            client.upload_file(Filename=local_path, Bucket=bucket_name, Key=s3_key
 
 #---- 1.b.iv ----
 @app.command("ls")
