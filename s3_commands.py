@@ -9,7 +9,7 @@ app = typer.Typer()
 @app.command("create-bucket")
 def create_bucket(
     bucket_name: str = typer.Argument(..., help="Globally unique bucket name"),
-    region: str = typer.Option("eu-north-1", "--region", "-r", help="AWS region"),
+    region: str = typer.Option(..., "--region", "-r", help="AWS region (e.g. eu-north-1)"),
 ):
     """Create a new S3 bucket."""
 
@@ -98,17 +98,27 @@ def delete_bucket(
     force: bool = typer.Option(False, "--force", "-f", help="Delete all objects first, then delete bucket"),
 ):
     """Delete an S3 bucket. Use --force to empty it first."""
-    print(f"Deleting bucket '{bucket_name}' (force={force})...")
 
     client = get_client("s3")
-    # TODO: if force, empty first. then client.delete_bucket(Bucket=bucket_name)
 
+    while True:
+        response = client.list_objects_v2(Bucket=bucket_name)
+        objects = response.get("Contents", [])
+        if objects:
+            client.delete_objects(
+                Bucket=bucket_name,
+                Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
+            )
+        if not response["IsTruncated"]:
+            break
+    client.delete_bucket(Bucket=bucket_name)
 
 #---- bonus: list buckets ----
 @app.command("list-buckets")
 def list_buckets():
     """List all S3 buckets in the account."""
-    print("Listing all buckets...")
 
     client = get_client("s3")
-    # TODO: client.list_buckets()
+    response = client.list_buckets()
+    for bucket in response["Buckets"]:
+        typer.echo(f"{bucket['Name']}")
