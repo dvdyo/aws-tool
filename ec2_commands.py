@@ -9,7 +9,7 @@ app = typer.Typer()
 @app.command("create")
 def create_instance(
     ami_id: str = typer.Argument(..., help="AMI image ID (e.g. ami-0c1ac8a41498c1a9e)"),
-    instance_type: str = typer.Option("t2.micro", "--type", "-t", help="Instance type (Free Tier: t2.micro)"),
+    instance_type: str = typer.Option(..., "--type", "-t", help="Instance type (e.g. t3.micro)"),
     key_name: Optional[str] = typer.Option(None, "--key", "-k", help="Name of an existing EC2 key pair for SSH"),
     security_group_ids: Optional[List[str]] = typer.Option(None, "--sg", help="Security group IDs to attach"),
     script_path: Optional[str] = typer.Option(None, "--script", "-s", help="Path to a bash script for UserData"),
@@ -92,7 +92,6 @@ def tag_instance(
         for t in tags:
             k, v = t.split("=", 1)
             tag_list.append({"Key": k, "Value": v})
-        typer.echo(f"  extra tags: {tags}")
 
     if not tag_list:
         typer.echo("Error: You must provide at least a --name or --tag")

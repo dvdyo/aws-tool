@@ -12,11 +12,12 @@ def create_bucket(
     region: str = typer.Option("eu-north-1", "--region", "-r", help="AWS region"),
 ):
     """Create a new S3 bucket."""
-    print(f"Creating bucket '{bucket_name}' in {region}...")
 
     client = get_client("s3", region_name=region)
-    # TODO: client.create_bucket(...)
-
+    client.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={"LocationConstraint": region},
+    )
 
 #---- 1.b.ii ----
 @app.command("upload")
