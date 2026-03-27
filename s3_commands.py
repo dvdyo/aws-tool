@@ -31,11 +31,10 @@ def upload_file(
         import os
         s3_key = os.path.basename(file_path)
 
-    print(f"Uploading {file_path} -> s3://{bucket_name}/{s3_key}")
 
     client = get_client("s3")
-    # TODO: client.upload_file(Filename=file_path, Bucket=bucket_name, Key=s3_key)
 
+    client.upload_file(Filename=file_path, Bucket=bucket_name, Key=s3_key)
 
 #---- 1.b.iii ----
 @app.command("upload-folder")
