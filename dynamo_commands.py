@@ -83,12 +83,13 @@ def get_item(
     key: str = typer.Option(..., "--key", help='DynamoDB JSON key, e.g. \'{"id": {"S": "123"}}\''),
 ):
     """Get a single item from a DynamoDB table by its key."""
-    print(f"Getting item from '{table_name}'...")
 
     client = get_client("dynamodb")
     from boto3.dynamodb.types import TypeDeserializer
     deserializer = TypeDeserializer()
 
+    import json
+    
     parsed_key = json.loads(key)
     response = client.get_item(TableName=table_name, Key=parsed_key)
 
