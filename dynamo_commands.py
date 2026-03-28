@@ -34,7 +34,7 @@ def populate_from_s3(
     print(f"Populating '{table_name}' from s3://{bucket_name}/{s3_key}...")
 
     s3 = get_client("s3")
-    dynamo = get_resource("dynamodb")
+    dynamodb = get_resource("dynamodb")
     table = dynamodb.Table(table_name)
 
      # grab the file from s3 and parse each line as a DynamoDB JSON item
@@ -44,6 +44,8 @@ def populate_from_s3(
     # need to convert DynamoDB JSON format ({"S": "value"}) to normal python dicts
     from boto3.dynamodb.types import TypeDeserializer
     deserializer = TypeDeserializer()
+
+    import json
 
     with table.batch_writer() as batch:
         for line in lines:
