@@ -46,14 +46,14 @@ def upload_folder(
     """Recursively upload a local folder to an S3 bucket."""
 
     client = get_client("s3")
-    
+    import os
     for root, dirs, files in os.walk(folder_path):
         for file in files:
             local_path = os.path.join(root, file)
             relative_path = os.path.relpath(local_path, folder_path)
             s3_key = os.path.join(prefix, relative_path) if prefix else relative_path
         
-            client.upload_file(Filename=local_path, Bucket=bucket_name, Key=s3_key
+            client.upload_file(Filename=local_path, Bucket=bucket_name, Key=s3_key)
 
 #---- 1.b.iv ----
 @app.command("ls")
@@ -63,8 +63,6 @@ def list_objects(
     show_versions: bool = typer.Option(False, "--versions", "-v", help="Show object versions"),
 ):
     """List files on a bucket with name, size, storage class, versions."""
-    print(f"Listing s3://{bucket_name}/{prefix}  (versions={show_versions})")
-
     client = get_client("s3")
     
     if show_versions:
@@ -95,7 +93,6 @@ def delete_objects(
     prefix: str = typer.Argument(..., help="Key or prefix to delete"),
 ):
     """Delete a file or all files under a prefix on a bucket."""
-    print(f"Deleting s3://{bucket_name}/{prefix}...")
 
     client = get_client("s3")
     response = client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
@@ -120,16 +117,31 @@ def delete_bucket(
 
     client = get_client("s3")
 
-    while True:
-        response = client.list_objects_v2(Bucket=bucket_name)
-        objects = response.get("Contents", [])
-        if objects:
+    if force:
+        # delete all current objects
+        while True:
+            response = client.list_objects_v2(Bucket=bucket_name)
+            objects = response.get("Contents", [])
+            if objects:
+                client.delete_objects(
+                    Bucket=bucket_name,
+                    Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
+                )
+            if not response["IsTruncated"]:
+                break
+
+        # delete all versions and delete markers
+        response = client.list_object_versions(Bucket=bucket_name)
+        versioned = [
+            {"Key": obj["Key"], "VersionId": obj["VersionId"]}
+            for obj in response.get("Versions", []) + response.get("DeleteMarkers", [])
+        ]
+        if versioned:
             client.delete_objects(
                 Bucket=bucket_name,
-                Delete={"Objects": [{"Key": obj["Key"]} for obj in objects]},
+                Delete={"Objects": versioned},
             )
-        if not response["IsTruncated"]:
-            break
+
     client.delete_bucket(Bucket=bucket_name)
 
 #---- bonus: list buckets ----

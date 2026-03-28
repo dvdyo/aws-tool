@@ -11,15 +11,17 @@ def create_table(
     table_name: str = typer.Argument(..., help="DynamoDB table name"),
     partition_key: str = typer.Option(..., "--pk", help="Partition key name (e.g. 'id')"),
     pk_type: str = typer.Option("S", "--pk-type", help="Partition key type: S, N, or B"),
-    sort_key: Optional[str] = typer.Option(None, "--sk", help="Sort key name (optional)"),
-    sk_type: str = typer.Option("S", "--sk-type", help="Sort key type: S, N, or B"),
 ):
     """Create a new DynamoDB table."""
-    print(f"Creating table '{table_name}' (pk={partition_key}:{pk_type}, sk={sort_key}:{sk_type})...")
 
     client = get_client("dynamodb")
-    # TODO: client.create_table(...)
 
+    client.create_table(
+        TableName=table_name,
+        KeySchema=[{"AttributeName": partition_key, "KeyType": "HASH"}],
+        AttributeDefinitions=[{"AttributeName": partition_key, "AttributeType": pk_type}],
+        BillingMode="PAY_PER_REQUEST",
+    )
 
 #---- 1.c.ii ----
 @app.command("populate")
