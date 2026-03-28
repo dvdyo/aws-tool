@@ -34,10 +34,26 @@ def populate_from_s3(
     print(f"Populating '{table_name}' from s3://{bucket_name}/{s3_key}...")
 
     s3 = get_client("s3")
-    dynamo = get_client("dynamodb")
-    # TODO: get object from s3, parse, batch write to dynamo
+    dynamo = get_resource("dynamodb")
+    table = dynamodb.Table(table_name)
 
+     # grab the file from s3 and parse each line as a DynamoDB JSON item
+    response = s3.get_object(Bucket=bucket_name, Key=s3_key)
+    lines = response["Body"].read().decode("utf-8").splitlines()
 
+    # need to convert DynamoDB JSON format ({"S": "value"}) to normal python dicts
+    deserializer = TypeDeserializer()
+
+    with table.batch_writer() as batch:
+        for line in lines:
+            if not line.strip():
+                continue
+            dynamo_item = json.loads(line)['Item']
+            native_item = {
+                k: deserializer.deserialize(v) for k, v in dynamo_item.items()
+            }
+            batch.put_item(Item=native_item)
+            
 #---- 1.c.iii ----
 @app.command("get")
 def get_data(
