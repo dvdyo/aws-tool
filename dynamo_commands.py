@@ -66,7 +66,5 @@ def delete_table(
     if not confirm:
         typer.confirm(f"Are you sure you want to delete table '{table_name}'?", abort=True)
 
-    print(f"Deleting table '{table_name}'...")
-
     client = get_client("dynamodb")
-    # TODO: client.delete_table(TableName=table_name)
+    client.delete_table(TableName=table_name)
