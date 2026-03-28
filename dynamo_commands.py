@@ -1,6 +1,6 @@
 from typing import Optional
 import typer
-from utils import get_client
+from utils import get_client, get_resource
 
 app = typer.Typer()
 
@@ -42,6 +42,7 @@ def populate_from_s3(
     lines = response["Body"].read().decode("utf-8").splitlines()
 
     # need to convert DynamoDB JSON format ({"S": "value"}) to normal python dicts
+    from boto3.dynamodb.types import TypeDeserializer
     deserializer = TypeDeserializer()
 
     with table.batch_writer() as batch:
@@ -55,22 +56,46 @@ def populate_from_s3(
             batch.put_item(Item=native_item)
             
 #---- 1.c.iii ----
-@app.command("get")
-def get_data(
+@app.command("scan")
+def scan_table(
     table_name: str = typer.Argument(..., help="DynamoDB table name"),
-    pk_value: Optional[str] = typer.Option(None, "--pk-value", help="Partition key value for single item"),
-    limit: int = typer.Option(10, "--limit", "-n", help="Max items when scanning"),
+    limit: int = typer.Option(10, "--limit", "-n", help="Max items to return"),
 ):
-    """Get items from a DynamoDB table (single item by PK, or scan)."""
+    """Scan a DynamoDB table and return up to --limit items."""
+
     client = get_client("dynamodb")
+    from boto3.dynamodb.types import TypeDeserializer
+    deserializer = TypeDeserializer()
 
-    if pk_value:
-        print(f"Getting item with pk={pk_value} from '{table_name}'...")
-        # TODO: client.get_item(...)
+    response = client.scan(TableName=table_name, Limit=limit)
+
+    items = response.get("Items", [])
+    for item in items:
+        native = {k: deserializer.deserialize(v) for k, v in item.items()}
+        print(json.dumps(native, indent=2, default=str))
+
+
+@app.command("get-item")
+def get_item(
+    table_name: str = typer.Argument(..., help="DynamoDB table name"),
+    key: str = typer.Option(..., "--key", help='DynamoDB JSON key, e.g. \'{"id": {"S": "123"}}\''),
+):
+    """Get a single item from a DynamoDB table by its key."""
+    print(f"Getting item from '{table_name}'...")
+
+    client = get_client("dynamodb")
+    from boto3.dynamodb.types import TypeDeserializer
+    deserializer = TypeDeserializer()
+
+    parsed_key = json.loads(key)
+    response = client.get_item(TableName=table_name, Key=parsed_key)
+
+    item = response.get("Item")
+    if item:
+        native = {k: deserializer.deserialize(v) for k, v in item.items()}
+        print(json.dumps(native, indent=2, default=str))
     else:
-        print(f"Scanning '{table_name}' (limit {limit})...")
-        # TODO: client.scan(...)
-
+        print("Item not found.")
 
 #---- 1.c.iv ----
 @app.command("delete-table")
