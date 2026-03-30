@@ -71,6 +71,8 @@ def scan_table(
 
     response = client.scan(TableName=table_name, Limit=limit)
 
+    import json
+    
     items = response.get("Items", [])
     for item in items:
         native = {k: deserializer.deserialize(v) for k, v in item.items()}
